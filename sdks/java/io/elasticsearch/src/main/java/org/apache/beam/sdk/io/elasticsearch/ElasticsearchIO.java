@@ -55,6 +55,7 @@ import org.apache.beam.sdk.transforms.display.DisplayData;
 import org.apache.beam.sdk.values.PBegin;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PDone;
+import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
@@ -63,6 +64,7 @@ import org.apache.http.client.CredentialsProvider;
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 import org.apache.http.entity.ContentType;
 import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.message.BasicHeader;
 import org.apache.http.nio.conn.ssl.SSLIOSessionStrategy;
 import org.apache.http.nio.entity.NStringEntity;
 import org.apache.http.ssl.SSLContexts;
@@ -201,6 +203,9 @@ public class ElasticsearchIO {
     @Nullable
     public abstract String getKeystorePassword();
 
+    @Nullable
+    public abstract String getCookie();
+
     public abstract String getIndex();
 
     public abstract String getType();
@@ -218,6 +223,8 @@ public class ElasticsearchIO {
       abstract Builder setKeystorePath(String keystorePath);
 
       abstract Builder setKeystorePassword(String password);
+
+      abstract Builder setCookie(String cookie);
 
       abstract Builder setIndex(String index);
 
@@ -293,6 +300,12 @@ public class ElasticsearchIO {
         return builder().setKeystorePassword(keystorePassword).build();
     }
 
+    public ConnectionConfiguration withCookie(String cookie) {
+      checkArgument(cookie != null, "cookie cannot be null");
+      checkArgument(!cookie.isEmpty(), "cookie cannot be empty");
+      return builder().setCookie(cookie).build();
+    }
+
     private void populateDisplayData(DisplayData.Builder builder) {
       builder.add(DisplayData.item("address", getAddresses().toString()));
       builder.add(DisplayData.item("index", getIndex()));
@@ -335,6 +348,13 @@ public class ElasticsearchIO {
         } catch (Exception e) {
           throw new IOException("Can't load the client certificate from the keystore", e);
         }
+      }
+      if (getCookie() != null) {
+        BasicHeader cookieHeader = new BasicHeader("Cookie", getCookie());
+        Header[] headers = {
+            cookieHeader
+        };
+        restClientBuilder.setDefaultHeaders(headers);
       }
       return restClientBuilder.build();
     }
